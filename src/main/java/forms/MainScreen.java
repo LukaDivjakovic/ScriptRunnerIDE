@@ -1,14 +1,15 @@
 package forms;
 
+import logic.KeywordMatch;
 import logic.KeywordProcessor;
 import logic.Keywords;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.text.Element;
-import javax.swing.text.StyledDocument;
+import javax.swing.text.*;
 import java.awt.*;
+import java.util.List;
 
 public class MainScreen {
     private JPanel contentPane;
@@ -114,6 +115,9 @@ public class MainScreen {
             }
 
             private void handleUpdate(DocumentEvent e) {
+                if (e.getType() == DocumentEvent.EventType.CHANGE) {
+                    return;
+                }
                 SwingUtilities.invokeLater(() -> {
                     StyledDocument doc = editPane.getStyledDocument();
                     Element root = doc.getDefaultRootElement();
@@ -123,8 +127,33 @@ public class MainScreen {
                     int start = line.getStartOffset();
                     int end = line.getEndOffset();
 
-                    keywordProcessor.processLine(doc, start, end);
+                    try {
+                        String lineText = doc.getText(start, end - start);
+                        List<KeywordMatch> matches = keywordProcessor.processLine(lineText, start);
+                        highlightKeywords(matches, start, end);
+                    } catch (BadLocationException ex) {
+                        ex.printStackTrace();
+                    }
                 });
+            }
+
+            private void highlightKeywords(List<KeywordMatch> matches, int lineStart, int lineEnd) {
+                StyledDocument doc = editPane.getStyledDocument();
+
+                // Reset style for the whole line
+                SimpleAttributeSet defaultAttr = new SimpleAttributeSet();
+                StyleConstants.setForeground(defaultAttr, Color.BLACK);
+                StyleConstants.setBold(defaultAttr, false);
+                doc.setCharacterAttributes(lineStart, lineEnd - lineStart, defaultAttr, true);
+
+                // Apply keyword style
+                SimpleAttributeSet keywordAttr = new SimpleAttributeSet();
+                StyleConstants.setForeground(keywordAttr, Color.BLUE);
+                StyleConstants.setBold(keywordAttr, true);
+
+                for (KeywordMatch match : matches) {
+                    doc.setCharacterAttributes(match.getStart(), match.getLength(), keywordAttr, false);
+                }
             }
         });
     }

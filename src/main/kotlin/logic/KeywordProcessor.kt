@@ -1,10 +1,23 @@
 package logic
 
-import javax.swing.text.StyledDocument
+data class KeywordMatch(val start: Int, val length: Int)
 
 class KeywordProcessor(private val keywords: Keywords) {
-    fun processLine(doc: StyledDocument, lineStart: Int, lineEnd: Int) {
-        // Placeholder for logic of finding keywords in a specific line
-        // As requested: "When unsure about specifics, leave the block empty"
+    fun processLine(lineText: String, lineOffset: Int): List<KeywordMatch> {
+        val matches = mutableListOf<KeywordMatch>()
+        val wordsInLine = lineText.split(Regex("\\W+"))
+        
+        var currentIndex = 0
+        for (word in wordsInLine) {
+            if (word.isEmpty()) continue
+            
+            val wordStart = lineText.indexOf(word, currentIndex)
+            if (keywords.words.contains(word)) {
+                matches.add(KeywordMatch(lineOffset + wordStart, word.length))
+            }
+            currentIndex = wordStart + word.length
+        }
+        
+        return matches
     }
 }
