@@ -1,0 +1,131 @@
+package forms;
+
+import logic.KeywordProcessor;
+import logic.Keywords;
+
+import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.text.Element;
+import javax.swing.text.StyledDocument;
+import java.awt.*;
+
+public class MainScreen {
+    private JPanel contentPane;
+    private JTextPane editPane;
+    private JTextPane outputPane;
+    private JTextPane errorPane;
+    private JLabel statusLabel;
+    private JButton runButton;
+
+    private KeywordProcessor keywordProcessor;
+
+    public MainScreen() {
+        keywordProcessor = new KeywordProcessor(new Keywords());
+        // Initialize components
+        contentPane = new JPanel(new GridBagLayout());
+        editPane = new JTextPane();
+        outputPane = new JTextPane();
+        errorPane = new JTextPane();
+        statusLabel = new JLabel("Ready");
+        runButton = new JButton("Run");
+
+        // Configure components
+        editPane.setEditable(true);
+
+        setupDocumentListener();
+
+        outputPane.setEditable(false);
+        errorPane.setEditable(false);
+
+        // Optional: make output/error panes look like text areas
+        outputPane.setBackground(UIManager.getColor("TextArea.background"));
+        errorPane.setBackground(UIManager.getColor("TextArea.background"));
+
+        // Setup layout for main content
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.fill = GridBagConstraints.BOTH;
+
+        // Editor pane on the left (spanning two rows)
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridheight = 2;
+        gbc.weightx = 0.5;
+        gbc.weighty = 1.0;
+        contentPane.add(new JScrollPane(editPane), gbc);
+
+        // Right column
+        JPanel rightPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints rpc = new GridBagConstraints();
+        rpc.insets = new Insets(5, 5, 5, 5);
+        rpc.gridx = 0;
+        rpc.fill = GridBagConstraints.BOTH;
+        rpc.weightx = 1.0;
+
+        // Output pane (top)
+        rpc.gridy = 0;
+        rpc.weighty = 0.5;
+        rightPanel.add(new JScrollPane(outputPane), rpc);
+
+        // Center panel with label + button
+        rpc.gridy = 1;
+        rpc.weighty = 0.0;
+        JPanel centerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
+        centerPanel.setOpaque(false);
+        centerPanel.add(statusLabel);
+        centerPanel.add(runButton);
+        centerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        rightPanel.add(centerPanel, rpc);
+
+        // Error pane (bottom)
+        rpc.gridy = 2;
+        rpc.weighty = 0.5;
+        rightPanel.add(new JScrollPane(errorPane), rpc);
+
+        // Add right panel to main layout
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        gbc.gridheight = 2;
+        gbc.weightx = 0.5;
+        gbc.weighty = 1.0;
+        contentPane.add(rightPanel, gbc);
+    }
+
+    public JPanel getContentPane() {
+        return contentPane;
+    }
+
+    private void setupDocumentListener() {
+        editPane.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                handleUpdate(e);
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                handleUpdate(e);
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                handleUpdate(e);
+            }
+
+            private void handleUpdate(DocumentEvent e) {
+                SwingUtilities.invokeLater(() -> {
+                    StyledDocument doc = editPane.getStyledDocument();
+                    Element root = doc.getDefaultRootElement();
+                    int offset = e.getOffset();
+                    int lineIndex = root.getElementIndex(offset);
+                    Element line = root.getElement(lineIndex);
+                    int start = line.getStartOffset();
+                    int end = line.getEndOffset();
+
+                    keywordProcessor.processLine(doc, start, end);
+                });
+            }
+        });
+    }
+}
