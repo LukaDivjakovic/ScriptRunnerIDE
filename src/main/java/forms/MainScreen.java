@@ -58,7 +58,9 @@ public class MainScreen {
         gbc.gridheight = 2;
         gbc.weightx = 0.5;
         gbc.weighty = 1.0;
-        contentPane.add(new JScrollPane(editPane), gbc);
+        JScrollPane editScrollPane = new JScrollPane(editPane);
+        editScrollPane.setPreferredSize(new Dimension(300, 400));
+        contentPane.add(editScrollPane, gbc);
 
         // Right column
         JPanel rightPanel = new JPanel(new GridBagLayout());
@@ -71,7 +73,9 @@ public class MainScreen {
         // Output pane (top)
         rpc.gridy = 0;
         rpc.weighty = 0.5;
-        rightPanel.add(new JScrollPane(outputPane), rpc);
+        JScrollPane outputScrollPane = new JScrollPane(outputPane);
+        outputScrollPane.setPreferredSize(new Dimension(300, 200));
+        rightPanel.add(outputScrollPane, rpc);
 
         // Center panel with label + button
         rpc.gridy = 1;
@@ -86,7 +90,9 @@ public class MainScreen {
         // Error pane (bottom)
         rpc.gridy = 2;
         rpc.weighty = 0.5;
-        rightPanel.add(new JScrollPane(errorPane), rpc);
+        JScrollPane errorScrollPane = new JScrollPane(errorPane);
+        errorScrollPane.setPreferredSize(new Dimension(300, 200));
+        rightPanel.add(errorScrollPane, rpc);
 
         // Add right panel to main layout
         gbc.gridx = 1;
@@ -136,7 +142,7 @@ public class MainScreen {
                     }
             );
             SwingUtilities.invokeLater(() -> {
-                statusLabel.setText("Ready");
+                statusLabel.setText(scriptExecutor.getStatusMessage(result));
                 runButton.setEnabled(true);
             });
         }).start();

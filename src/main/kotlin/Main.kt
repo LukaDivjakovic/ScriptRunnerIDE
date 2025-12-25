@@ -1,5 +1,4 @@
-package forms
-
+import forms.MainScreen
 import javax.swing.*
 
 fun main() {
@@ -8,7 +7,7 @@ fun main() {
         val mainScreen = MainScreen()
         frame.contentPane = mainScreen.contentPane
         frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
-        frame.setSize(800, 600)
+        frame.extendedState = JFrame.MAXIMIZED_BOTH
         frame.setLocationRelativeTo(null)
         frame.isVisible = true
     }

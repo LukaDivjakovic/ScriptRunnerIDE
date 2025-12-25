@@ -6,7 +6,11 @@ import java.nio.file.Files
 import java.util.concurrent.TimeUnit
 
 class ScriptExecutor {
-    data class ExecutionResult(val output: String, val error: String)
+    data class ExecutionResult(val output: String, val error: String, val exitCode: Int)
+
+    fun getStatusMessage(result: ExecutionResult): String {
+        return if (result.exitCode == 0) "Success" else "Failed (exit code: ${result.exitCode})"
+    }
 
     fun execute(
         scriptContent: String,
@@ -54,13 +58,14 @@ class ScriptExecutor {
             outputThread.start()
             errorThread.start()
 
-            process.waitFor(30, TimeUnit.SECONDS)
+            process.waitFor()
+            val exitCode = process.exitValue()
             outputThread.join()
             errorThread.join()
 
-            return ExecutionResult(outputStringBuilder.toString(), errorStringBuilder.toString())
+            return ExecutionResult(outputStringBuilder.toString(), errorStringBuilder.toString(), exitCode)
         } catch (e: Exception) {
-            return ExecutionResult("", e.message ?: "Unknown error occurred")
+            return ExecutionResult("", e.message ?: "Unknown error occurred", -1)
         } finally {
             if (tempFile.exists()) {
                 tempFile.delete()
