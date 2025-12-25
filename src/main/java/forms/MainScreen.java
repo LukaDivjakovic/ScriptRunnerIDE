@@ -1,15 +1,14 @@
 package forms;
 
-import logic.KeywordMatch;
-import logic.KeywordProcessor;
-import logic.Keywords;
-import logic.ScriptExecutor;
+import logic.*;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.List;
 
 public class MainScreen {
@@ -22,10 +21,12 @@ public class MainScreen {
 
     private KeywordProcessor keywordProcessor;
     private ScriptExecutor scriptExecutor;
+    private ErrorLinkProcessor errorLinkProcessor;
 
     public MainScreen() {
         keywordProcessor = new KeywordProcessor(new Keywords());
         scriptExecutor = new ScriptExecutor();
+        errorLinkProcessor = new ErrorLinkProcessor();
         // Initialize components
         contentPane = new JPanel(new GridBagLayout());
         editPane = new JTextPane();
@@ -39,6 +40,7 @@ public class MainScreen {
         editPane.setEditable(true);
 
         setupDocumentListener();
+        setupErrorPane();
 
         outputPane.setEditable(false);
         errorPane.setEditable(false);
@@ -129,11 +131,31 @@ public class MainScreen {
                         });
                         return null;
                     },
-                    line -> {
+                    text -> {
                         SwingUtilities.invokeLater(() -> {
                             try {
-                                Document doc = errorPane.getDocument();
-                                doc.insertString(doc.getLength(), line, null);
+                                StyledDocument doc = errorPane.getStyledDocument();
+                                int startPos = doc.getLength();
+                                doc.insertString(startPos, text, null);
+
+                                // Get the whole text to find links (it's simpler than incremental for regex)
+                                String fullText = doc.getText(0, doc.getLength());
+                                List<ErrorLink> links = errorLinkProcessor.findLinks(fullText);
+
+                                // Clear existing link attributes and apply new ones
+                                SimpleAttributeSet defaultAttr = new SimpleAttributeSet();
+                                doc.setCharacterAttributes(0, fullText.length(), defaultAttr, true);
+
+                                SimpleAttributeSet linkAttr = new SimpleAttributeSet();
+                                StyleConstants.setForeground(linkAttr, Color.BLUE);
+                                StyleConstants.setUnderline(linkAttr, true);
+
+                                for (ErrorLink link : links) {
+                                    SimpleAttributeSet currentLinkAttr = new SimpleAttributeSet(linkAttr);
+                                    currentLinkAttr.addAttribute("line", link.getLine());
+                                    currentLinkAttr.addAttribute("column", link.getColumn());
+                                    doc.setCharacterAttributes(link.getStart(), link.getEnd() - link.getStart(), currentLinkAttr, false);
+                                }
                             } catch (BadLocationException e) {
                                 e.printStackTrace();
                             }
@@ -146,6 +168,67 @@ public class MainScreen {
                 runButton.setEnabled(true);
             });
         }).start();
+    }
+
+    private void setupErrorPane() {
+        errorPane.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int pos = errorPane.viewToModel2D(e.getPoint());
+                if (pos >= 0) {
+                    StyledDocument doc = errorPane.getStyledDocument();
+                    Element element = doc.getCharacterElement(pos);
+                    AttributeSet attrs = element.getAttributes();
+                    Object line = attrs.getAttribute("line");
+                    Object column = attrs.getAttribute("column");
+                    if (line instanceof Integer && column instanceof Integer) {
+                        goToLine((Integer) line, (Integer) column);
+                    }
+                }
+            }
+        });
+
+        errorPane.addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                int pos = errorPane.viewToModel2D(e.getPoint());
+                if (pos >= 0) {
+                    StyledDocument doc = errorPane.getStyledDocument();
+                    Element element = doc.getCharacterElement(pos);
+                    AttributeSet attrs = element.getAttributes();
+                    if (attrs.getAttribute("line") != null) {
+                        errorPane.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                        return;
+                    }
+                }
+                errorPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+            }
+        });
+    }
+
+    private void goToLine(int line, int column) {
+        SwingUtilities.invokeLater(() -> {
+            try {
+                StyledDocument doc = editPane.getStyledDocument();
+                Element root = doc.getDefaultRootElement();
+                if (line > 0 && line <= root.getElementCount()) {
+                    Element lineElement = root.getElement(line - 1);
+                    int startOffset = lineElement.getStartOffset();
+                    int endOffset = lineElement.getEndOffset();
+                    int targetOffset = startOffset + column - 1;
+                    if (targetOffset > endOffset) targetOffset = endOffset;
+
+                    editPane.requestFocusInWindow();
+                    editPane.setCaretPosition(targetOffset);
+
+                    // Ensure the caret is visible
+                    Rectangle viewRect = editPane.modelToView2D(targetOffset).getBounds();
+                    editPane.scrollRectToVisible(viewRect);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     private void setupDocumentListener() {
