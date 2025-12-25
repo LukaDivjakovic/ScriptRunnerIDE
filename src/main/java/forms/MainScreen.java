@@ -151,59 +151,76 @@ public class MainScreen {
     private void setupDocumentListener() {
         editPane.getDocument().addDocumentListener(new DocumentListener() {
             @Override
-            public void insertUpdate(DocumentEvent e) {
-                handleUpdate(e);
-            }
+            public void insertUpdate(DocumentEvent e) { handleUpdate(e); }
 
             @Override
-            public void removeUpdate(DocumentEvent e) {
-                handleUpdate(e);
-            }
+            public void removeUpdate(DocumentEvent e) { handleUpdate(e); }
 
             @Override
-            public void changedUpdate(DocumentEvent e) {
-                handleUpdate(e);
-            }
+            public void changedUpdate(DocumentEvent e) { handleUpdate(e); }
 
             private void handleUpdate(DocumentEvent e) {
                 if (e.getType() == DocumentEvent.EventType.CHANGE) {
                     return;
                 }
                 SwingUtilities.invokeLater(() -> {
-                    StyledDocument doc = editPane.getStyledDocument();
-                    Element root = doc.getDefaultRootElement();
-                    int offset = e.getOffset();
-                    int lineIndex = root.getElementIndex(offset);
-                    Element line = root.getElement(lineIndex);
-                    int start = line.getStartOffset();
-                    int end = line.getEndOffset();
-
                     try {
-                        String lineText = doc.getText(start, end - start);
-                        List<KeywordMatch> matches = keywordProcessor.processLine(lineText, start);
-                        highlightKeywords(matches, start, end);
-                    } catch (BadLocationException ex) {
+                        StyledDocument doc = editPane.getStyledDocument();
+                        Element root = doc.getDefaultRootElement();
+
+                        int startOffset = e.getOffset();
+                        int changedLength = e.getLength(); // inserted or removed length
+                        int docLength = doc.getLength();
+
+                        // Compute safe end offset for determining last affected line.
+                        // Use startOffset + changedLength - 1 (last changed char). Clamp to [0, docLength-1].
+                        int endOffsetCandidate = Math.max(0, startOffset + Math.max(0, changedLength) - 1);
+                        int endOffsetForIndex = Math.min(Math.max(0, docLength - 1), endOffsetCandidate);
+
+                        int startLineIndex = root.getElementIndex(Math.min(startOffset, Math.max(0, docLength - 1)));
+                        int endLineIndex = root.getElementIndex(endOffsetForIndex);
+
+                        for (int lineIndex = startLineIndex; lineIndex <= endLineIndex; lineIndex++) {
+                            Element line = root.getElement(lineIndex);
+                            int lineStart = line.getStartOffset();
+                            int lineEnd = line.getEndOffset();
+                            try {
+                                String lineText = doc.getText(lineStart, Math.max(0, lineEnd - lineStart));
+                                List<logic.KeywordMatch> matches = keywordProcessor.processLine(lineText, lineStart);
+                                highlightKeywords(matches, lineStart, lineEnd);
+                            } catch (BadLocationException ex) {
+                                ex.printStackTrace();
+                            }
+                        }
+                    } catch (Exception ex) {
                         ex.printStackTrace();
                     }
                 });
             }
 
-            private void highlightKeywords(List<KeywordMatch> matches, int lineStart, int lineEnd) {
+            private void highlightKeywords(List<logic.KeywordMatch> matches, int lineStart, int lineEnd) {
                 StyledDocument doc = editPane.getStyledDocument();
 
                 // Reset style for the whole line
                 SimpleAttributeSet defaultAttr = new SimpleAttributeSet();
                 StyleConstants.setForeground(defaultAttr, Color.BLACK);
                 StyleConstants.setBold(defaultAttr, false);
-                doc.setCharacterAttributes(lineStart, lineEnd - lineStart, defaultAttr, true);
+                doc.setCharacterAttributes(lineStart, Math.max(0, lineEnd - lineStart), defaultAttr, true);
 
                 // Apply keyword style
                 SimpleAttributeSet keywordAttr = new SimpleAttributeSet();
                 StyleConstants.setForeground(keywordAttr, Color.BLUE);
                 StyleConstants.setBold(keywordAttr, true);
 
-                for (KeywordMatch match : matches) {
-                    doc.setCharacterAttributes(match.getStart(), match.getLength(), keywordAttr, false);
+                for (logic.KeywordMatch match : matches) {
+                    int start = match.getStart();
+                    int length = match.getLength();
+                    // ensure attributes application stays within current document bounds
+                    int safeStart = Math.max(lineStart, Math.min(start, doc.getLength()));
+                    int safeLen = Math.max(0, Math.min(length, doc.getLength() - safeStart));
+                    if (safeLen > 0) {
+                        doc.setCharacterAttributes(safeStart, safeLen, keywordAttr, false);
+                    }
                 }
             }
         });
