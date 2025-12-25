@@ -3,6 +3,7 @@ package forms;
 import logic.KeywordMatch;
 import logic.KeywordProcessor;
 import logic.Keywords;
+import logic.ScriptExecutor;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
@@ -20,9 +21,11 @@ public class MainScreen {
     private JButton runButton;
 
     private KeywordProcessor keywordProcessor;
+    private ScriptExecutor scriptExecutor;
 
     public MainScreen() {
         keywordProcessor = new KeywordProcessor(new Keywords());
+        scriptExecutor = new ScriptExecutor();
         // Initialize components
         contentPane = new JPanel(new GridBagLayout());
         editPane = new JTextPane();
@@ -30,6 +33,7 @@ public class MainScreen {
         errorPane = new JTextPane();
         statusLabel = new JLabel("Ready");
         runButton = new JButton("Run");
+        runButton.addActionListener(e -> runScript());
 
         // Configure components
         editPane.setEditable(true);
@@ -95,6 +99,47 @@ public class MainScreen {
 
     public JPanel getContentPane() {
         return contentPane;
+    }
+
+    private void runScript() {
+        String script = editPane.getText();
+        statusLabel.setText("Running...");
+        runButton.setEnabled(false);
+        outputPane.setText("");
+        errorPane.setText("");
+
+        // Run in a separate thread to keep UI responsive
+        new Thread(() -> {
+            ScriptExecutor.ExecutionResult result = scriptExecutor.execute(
+                    script,
+                    line -> {
+                        SwingUtilities.invokeLater(() -> {
+                            try {
+                                Document doc = outputPane.getDocument();
+                                doc.insertString(doc.getLength(), line, null);
+                            } catch (BadLocationException e) {
+                                e.printStackTrace();
+                            }
+                        });
+                        return null;
+                    },
+                    line -> {
+                        SwingUtilities.invokeLater(() -> {
+                            try {
+                                Document doc = errorPane.getDocument();
+                                doc.insertString(doc.getLength(), line, null);
+                            } catch (BadLocationException e) {
+                                e.printStackTrace();
+                            }
+                        });
+                        return null;
+                    }
+            );
+            SwingUtilities.invokeLater(() -> {
+                statusLabel.setText("Ready");
+                runButton.setEnabled(true);
+            });
+        }).start();
     }
 
     private void setupDocumentListener() {
