@@ -2,6 +2,11 @@ import forms.MainScreen
 import javax.swing.*
 
 fun main() {
+    try {
+        UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName())
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
     SwingUtilities.invokeLater {
         val frame = JFrame("Script Runner IDE")
         val mainScreen = MainScreen()
