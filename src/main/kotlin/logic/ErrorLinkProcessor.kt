@@ -7,7 +7,6 @@ class ErrorLinkProcessor {
 
     fun findLinks(text: String): List<ErrorLink> {
         return regex.findAll(text).map { matchResult ->
-            val fullMatch = matchResult.value
             val line = matchResult.groupValues[2].toInt()
             val column = matchResult.groupValues[3].toInt()
             ErrorLink(matchResult.range.first, matchResult.range.last + 1, line, column)

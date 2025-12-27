@@ -19,9 +19,9 @@ public class MainScreen {
     private JLabel statusLabel;
     private JButton runButton;
 
-    private KeywordProcessor keywordProcessor;
-    private ScriptExecutor scriptExecutor;
-    private ErrorLinkProcessor errorLinkProcessor;
+    private final KeywordProcessor keywordProcessor;
+    private final ScriptExecutor scriptExecutor;
+    private final ErrorLinkProcessor errorLinkProcessor;
 
     private static final Color BG_COLOR = new Color(43, 43, 43);
     private static final Color EDITOR_BG = new Color(30, 30, 30);
@@ -123,7 +123,7 @@ public class MainScreen {
         outputPane.setText("");
         errorPane.setText("");
 
-        // Run in a separate thread to keep UI responsive
+        // Run in a separate thread to keep the UI responsive
         new Thread(() -> {
             ScriptExecutor.ExecutionResult result = scriptExecutor.execute(
                     script,
@@ -268,7 +268,7 @@ public class MainScreen {
                         int changedLength = e.getLength(); // inserted or removed length
                         int docLength = doc.getLength();
 
-                        // Compute safe end offset for determining last affected line.
+                        // Compute safe end offset for determining the last affected line.
                         // Use startOffset + changedLength - 1 (last changed char). Clamp to [0, docLength-1].
                         int endOffsetCandidate = Math.max(0, startOffset + Math.max(0, changedLength) - 1);
                         int endOffsetForIndex = Math.min(Math.max(0, docLength - 1), endOffsetCandidate);
