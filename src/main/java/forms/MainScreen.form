@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- UI definition for the main application screen -->
 <form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="forms.MainScreen">
+  <!-- Root panel for the application content -->
   <grid id="27dc6" binding="contentPane" layout-manager="BorderLayout" hgap="0" vgap="0">
     <margin top="0" left="0" bottom="0" right="0"/>
     <constraints>
@@ -8,17 +10,20 @@
     <properties/>
     <border type="none"/>
     <children>
+      <!-- Top toolbar containing status and action buttons -->
       <grid id="toolbar" layout-manager="BorderLayout" hgap="0" vgap="0">
         <constraints border-constraint="North"/>
         <properties/>
         <border type="none"/>
         <children>
+          <!-- Label indicating the current execution status -->
           <component id="a07df" class="javax.swing.JLabel" binding="statusLabel">
             <constraints border-constraint="West"/>
             <properties>
               <text value="Ready"/>
             </properties>
           </component>
+          <!-- Button to trigger script execution -->
           <component id="aab02" class="javax.swing.JButton" binding="runButton" default-binding="true">
             <constraints border-constraint="East"/>
             <properties>
@@ -27,6 +32,7 @@
           </component>
         </children>
       </grid>
+      <!-- Main split pane for editor and output views -->
       <splitpane id="mainSplit" layout-manager="GridLayoutManager">
         <constraints border-constraint="Center"/>
         <properties>
@@ -34,12 +40,14 @@
         </properties>
         <border type="none"/>
         <children>
+          <!-- Primary script editor component -->
           <component id="42055" class="javax.swing.JTextPane" binding="editPane">
             <constraints>
               <splitpane position="left"/>
             </constraints>
             <properties/>
           </component>
+          <!-- Secondary split pane for execution feedback -->
           <splitpane id="rightSplit" layout-manager="GridLayoutManager" orientation="1">
             <constraints>
               <splitpane position="right"/>
@@ -49,12 +57,14 @@
             </properties>
             <border type="none"/>
             <children>
+              <!-- Component for displaying execution output -->
               <component id="b3a6f" class="javax.swing.JTextPane" binding="outputPane">
                 <constraints>
                   <splitpane position="left"/>
                 </constraints>
                 <properties/>
               </component>
+              <!-- Component for displaying compilation errors -->
               <component id="e037b" class="javax.swing.JTextPane" binding="errorPane">
                 <constraints>
                   <splitpane position="right"/>

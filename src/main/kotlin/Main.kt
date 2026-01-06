@@ -7,6 +7,7 @@ fun main() {
     } catch (e: Exception) {
         e.printStackTrace()
     }
+    // Launch the main user interface on the Event Dispatch Thread
     SwingUtilities.invokeLater {
         val frame = JFrame("Script Runner IDE")
         val mainScreen = MainScreen()

@@ -4,10 +4,12 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class ErrorLinkProcessorTest {
+    // Instance of the processor to be tested
     private val processor = ErrorLinkProcessor()
 
     @Test
     fun testFindLinks() {
+        // Verify that a single error link can be correctly identified
         val text = "script123.kts:10:5: error: message"
         val links = processor.findLinks(text)
         assertEquals(1, links.size)
@@ -19,6 +21,7 @@ class ErrorLinkProcessorTest {
 
     @Test
     fun testFindMultipleLinks() {
+        // Verify that multiple error links across lines are correctly identified
         val text = "script123.kts:10:5: error: first\nscript456.kts:20:8: error: second"
         val links = processor.findLinks(text)
         assertEquals(2, links.size)
@@ -32,6 +35,7 @@ class ErrorLinkProcessorTest {
 
     @Test
     fun testNoLinks() {
+        // Verify that no links are found in text without the expected format
         val text = "some random error message"
         val links = processor.findLinks(text)
         assertEquals(0, links.size)

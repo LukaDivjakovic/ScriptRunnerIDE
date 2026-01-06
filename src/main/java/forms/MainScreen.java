@@ -30,23 +30,28 @@ public class MainScreen {
     private static final Color KEYWORD_COLOR = new Color(204, 120, 50);
 
     public MainScreen() {
+        // Initialize backend processors
         keywordProcessor = new KeywordProcessor(new Keywords());
         scriptExecutor = new ScriptExecutor();
         errorLinkProcessor = new ErrorLinkProcessor();
 
-        // Initialize components
+        // Initialize the main application panel
         contentPane = new JPanel(new BorderLayout());
         contentPane.setBackground(BG_COLOR);
 
+        // Configure the script editing area
         editPane = new JTextPane();
         setupTextPane(editPane, true);
 
+        // Configure the standard output display area
         outputPane = new JTextPane();
         setupTextPane(outputPane, false);
 
+        // Configure the compiler error display area
         errorPane = new JTextPane();
         setupTextPane(errorPane, false);
 
+        // Setup the execution status label
         statusLabel = new JLabel("READY");
         statusLabel.setOpaque(true);
         statusLabel.setBackground(ACCENT_COLOR);
@@ -54,8 +59,9 @@ public class MainScreen {
         statusLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
         statusLabel.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
 
+        // Configure the script execution trigger button
         runButton = new JButton("RUN");
-        runButton.setBackground(new Color(60, 140, 60)); // Distinct green for Run
+        runButton.setBackground(new Color(60, 140, 60)); 
         runButton.setForeground(Color.WHITE);
         runButton.setFont(new Font("SansSerif", Font.BOLD, 14));
         runButton.setFocusPainted(false);
@@ -67,7 +73,7 @@ public class MainScreen {
         ));
         runButton.addActionListener(e -> runScript());
 
-        // Toolbar / Header
+        // Create the top toolbar containing status and run controls
         JPanel toolbar = new JPanel(new BorderLayout());
         toolbar.setBackground(BG_COLOR);
         toolbar.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
@@ -75,28 +81,51 @@ public class MainScreen {
         toolbar.add(runButton, BorderLayout.EAST);
         contentPane.add(toolbar, BorderLayout.NORTH);
 
-        // Panes and Splitters
+        // Initialize scroll panes for the editor and output views
         JScrollPane editScrollPane = createScrollPane(editPane);
         JScrollPane outputScrollPane = createScrollPane(outputPane);
         JScrollPane errorScrollPane = createScrollPane(errorPane);
 
-        JSplitPane rightSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, outputScrollPane, errorScrollPane);
+        // Add descriptive labels to the editor and display panels
+        JPanel labeledEditPane = createLabeledPane("SCRIPT EDITOR", editScrollPane);
+        JPanel labeledOutputPane = createLabeledPane("OUTPUT", outputScrollPane);
+        JPanel labeledErrorPane = createLabeledPane("ERRORS", errorScrollPane);
+
+        // Create a vertical split pane for output and error displays
+        JSplitPane rightSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, labeledOutputPane, labeledErrorPane);
         rightSplitPane.setDividerLocation(300);
         rightSplitPane.setContinuousLayout(true);
         rightSplitPane.setBorder(null);
 
-        JSplitPane mainSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, editScrollPane, rightSplitPane);
-        mainSplitPane.setDividerLocation(500);
+        // Create a horizontal split pane to separate the editor from output views
+        JSplitPane mainSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, labeledEditPane, rightSplitPane);
+        mainSplitPane.setDividerLocation(1000); 
         mainSplitPane.setContinuousLayout(true);
         mainSplitPane.setBorder(null);
 
+        // Assemble the main layout components
         contentPane.add(mainSplitPane, BorderLayout.CENTER);
 
+        // Configure event listeners for user interactions
         setupDocumentListener();
         setupErrorPane();
     }
 
+    private JPanel createLabeledPane(String title, JComponent component) {
+        // Create a panel with a title label at the top
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(BG_COLOR);
+        JLabel label = new JLabel(title);
+        label.setForeground(TEXT_COLOR);
+        label.setFont(new Font("SansSerif", Font.BOLD, 12));
+        label.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
+        panel.add(label, BorderLayout.NORTH);
+        panel.add(component, BorderLayout.CENTER);
+        return panel;
+    }
+
     private void setupTextPane(JTextPane pane, boolean editable) {
+        // Configure text pane styling and behavior
         pane.setEditable(editable);
         pane.setBackground(EDITOR_BG);
         pane.setForeground(TEXT_COLOR);
@@ -106,16 +135,19 @@ public class MainScreen {
     }
 
     private JScrollPane createScrollPane(JComponent component) {
+        // Create a scroll pane with a consistent border
         JScrollPane scrollPane = new JScrollPane(component);
         scrollPane.setBorder(BorderFactory.createLineBorder(BG_COLOR, 1));
         return scrollPane;
     }
 
     public JPanel getContentPane() {
+        // Return the main content pane
         return contentPane;
     }
 
     private void runScript() {
+        // Execute the script and handle output and errors
         String script = editPane.getText();
         statusLabel.setText("RUNNING...");
         statusLabel.setBackground(ACCENT_COLOR);
@@ -123,11 +155,11 @@ public class MainScreen {
         outputPane.setText("");
         errorPane.setText("");
 
-        // Run in a separate thread to keep the UI responsive
         new Thread(() -> {
             ScriptExecutor.ExecutionResult result = scriptExecutor.execute(
                     script,
                     line -> {
+                        // Update output pane with execution results
                         SwingUtilities.invokeLater(() -> {
                             try {
                                 Document doc = outputPane.getDocument();
@@ -139,17 +171,16 @@ public class MainScreen {
                         return null;
                     },
                     text -> {
+                        // Update error pane with execution errors and links
                         SwingUtilities.invokeLater(() -> {
                             try {
                                 StyledDocument doc = errorPane.getStyledDocument();
                                 int startPos = doc.getLength();
                                 doc.insertString(startPos, text, null);
 
-                                // Get the whole text to find links (it's simpler than incremental for regex)
                                 String fullText = doc.getText(0, doc.getLength());
                                 List<ErrorLink> links = errorLinkProcessor.findLinks(fullText);
 
-                                // Clear existing link attributes and apply new ones
                                 SimpleAttributeSet defaultAttr = new SimpleAttributeSet();
                                 StyleConstants.setForeground(defaultAttr, TEXT_COLOR);
                                 doc.setCharacterAttributes(0, fullText.length(), defaultAttr, true);
@@ -172,11 +203,12 @@ public class MainScreen {
                     }
             );
             SwingUtilities.invokeLater(() -> {
+                // Update UI based on execution result
                 statusLabel.setText(scriptExecutor.getStatusMessage(result).toUpperCase());
                 if (result.getExitCode() == 0) {
-                    statusLabel.setBackground(new Color(60, 140, 60)); // Success green
+                    statusLabel.setBackground(new Color(60, 140, 60)); 
                 } else {
-                    statusLabel.setBackground(new Color(180, 50, 50)); // Fail red
+                    statusLabel.setBackground(new Color(180, 50, 50)); 
                 }
                 runButton.setEnabled(true);
             });
@@ -184,9 +216,11 @@ public class MainScreen {
     }
 
     private void setupErrorPane() {
+        // Handle clicks and mouse movement over error links
         errorPane.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
+                // Navigate to code location on link click
                 int pos = errorPane.viewToModel2D(e.getPoint());
                 if (pos >= 0) {
                     StyledDocument doc = errorPane.getStyledDocument();
@@ -204,6 +238,7 @@ public class MainScreen {
         errorPane.addMouseMotionListener(new MouseAdapter() {
             @Override
             public void mouseMoved(MouseEvent e) {
+                // Change cursor when hovering over links
                 int pos = errorPane.viewToModel2D(e.getPoint());
                 if (pos >= 0) {
                     StyledDocument doc = errorPane.getStyledDocument();
@@ -220,6 +255,7 @@ public class MainScreen {
     }
 
     private void goToLine(int line, int column) {
+        // Position caret at specific line and column in editor
         SwingUtilities.invokeLater(() -> {
             try {
                 StyledDocument doc = editPane.getStyledDocument();
@@ -234,7 +270,6 @@ public class MainScreen {
                     editPane.requestFocusInWindow();
                     editPane.setCaretPosition(targetOffset);
 
-                    // Ensure the caret is visible
                     Rectangle viewRect = editPane.modelToView2D(targetOffset).getBounds();
                     editPane.scrollRectToVisible(viewRect);
                 }
@@ -245,6 +280,7 @@ public class MainScreen {
     }
 
     private void setupDocumentListener() {
+        // Listen for editor changes to trigger keyword highlighting
         editPane.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) { handleUpdate(e); }
@@ -256,6 +292,7 @@ public class MainScreen {
             public void changedUpdate(DocumentEvent e) { handleUpdate(e); }
 
             private void handleUpdate(DocumentEvent e) {
+                // Determine affected lines and re-highlight keywords
                 if (e.getType() == DocumentEvent.EventType.CHANGE) {
                     return;
                 }
@@ -265,11 +302,9 @@ public class MainScreen {
                         Element root = doc.getDefaultRootElement();
 
                         int startOffset = e.getOffset();
-                        int changedLength = e.getLength(); // inserted or removed length
+                        int changedLength = e.getLength(); 
                         int docLength = doc.getLength();
 
-                        // Compute safe end offset for determining the last affected line.
-                        // Use startOffset + changedLength - 1 (last changed char). Clamp to [0, docLength-1].
                         int endOffsetCandidate = Math.max(0, startOffset + Math.max(0, changedLength) - 1);
                         int endOffsetForIndex = Math.min(Math.max(0, docLength - 1), endOffsetCandidate);
 
@@ -295,15 +330,14 @@ public class MainScreen {
             }
 
             private void highlightKeywords(List<logic.KeywordMatch> matches, int lineStart, int lineEnd) {
+                // Apply syntax highlighting to keywords in a line
                 StyledDocument doc = editPane.getStyledDocument();
 
-                // Reset style for the whole line
                 SimpleAttributeSet defaultAttr = new SimpleAttributeSet();
                 StyleConstants.setForeground(defaultAttr, TEXT_COLOR);
                 StyleConstants.setBold(defaultAttr, false);
                 doc.setCharacterAttributes(lineStart, Math.max(0, lineEnd - lineStart), defaultAttr, true);
 
-                // Apply keyword style
                 SimpleAttributeSet keywordAttr = new SimpleAttributeSet();
                 StyleConstants.setForeground(keywordAttr, KEYWORD_COLOR);
                 StyleConstants.setBold(keywordAttr, true);
@@ -311,7 +345,6 @@ public class MainScreen {
                 for (logic.KeywordMatch match : matches) {
                     int start = match.getStart();
                     int length = match.getLength();
-                    // ensure attributes application stays within current document bounds
                     int safeStart = Math.max(lineStart, Math.min(start, doc.getLength()));
                     int safeLen = Math.max(0, Math.min(length, doc.getLength() - safeStart));
                     if (safeLen > 0) {
